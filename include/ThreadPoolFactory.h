@@ -1,7 +1,7 @@
 #ifndef THREAD_POOL_FACTORY_H
 #define THREAD_POOL_FACTORY_H
 
-#include "ThreadPool.h"
+class ThreadPool;
 
 class ThreadPoolFactory {
 public:

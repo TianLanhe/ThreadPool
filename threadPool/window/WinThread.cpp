@@ -1,5 +1,6 @@
 #include "WinThread.h"
 #include "WinThreadPool.h"
+#include "../../include/Task.h"
 
 Thread* GGetWinThread(ThreadPool* pool) {
 	return new WinThread(pool);

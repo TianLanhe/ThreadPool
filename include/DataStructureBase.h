@@ -5,10 +5,6 @@
 #define ER 1
 #define INFEASIBLE -1
 
-#ifndef ElemType
-#define ElemType int
-#endif
-
 typedef int Status;
 
 #define BEFORE_CHECK_RESULT()	\
@@ -17,14 +13,6 @@ typedef int Status;
 #define CHECK_RESULT(func)		\
 	if((__status = func)!=OK){	\
 		return __status;		\
-	}
-
-#define CHECK_RESULT_BY_MSG(func,msg_s,msg_f)	\
-	if((__status = func)!=OK){			\
-		std::cout << (msg_f) << std::endl;		\
-		return __status;				\
-	}else{								\
-		std::cout << (msg_s) << std::endl;		\
 	}
 
 #define AFTER_CHECK_RESULT()	\
@@ -39,18 +27,29 @@ typedef int Status;
 	if(!(exp))					\
 		return ER
 
+#define BEFORE_SEND_MSG(ostream)		\
+	std::ostream& __out = ostream
+
+#define CHECK_RESULT_BY_MSG(func,msg_s,msg_f)	\
+	if((__status = func)!=OK){			\
+		__out << (msg_f) << std::endl;	\
+		return __status;				\
+	}else{								\
+		__out << (msg_s) << std::endl;	\
+	}
+
 #define CHECK_ERROR_BY_MSG(exp,msg_s,msg_f)	\
 	if(!(exp)){						\
-		std::cout << (msg_f) << std::endl;	\
+		__out << (msg_f) << std::endl;	\
 		return ER;					\
 	}else{							\
-		std::cout << (msg_s) << std::endl;	\
+		__out << (msg_s) << std::endl;	\
 	}
 
 #define CHECK_ERROR_BY_MSG2(exp,msg_f)	\
 	if(!(exp)){							\
-		std::cout << (msg_f) << std::endl;	\
-		return ER;							\
+		__out << (msg_f) << std::endl;	\
+		return ER;						\
 	}
 
 #endif

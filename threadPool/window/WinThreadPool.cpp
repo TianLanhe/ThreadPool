@@ -1,5 +1,6 @@
 #include "WinThreadPool.h"
 #include "WinThread.h"
+#include "../../include/Task.h"
 
 using namespace std;
 

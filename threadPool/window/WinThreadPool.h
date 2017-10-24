@@ -2,13 +2,14 @@
 #define WIN_THREAD_POOL_H
 
 #include "../../include/ThreadPool.h"
-#include "../../include/Thread.h"
 
 #include <Windows.h>
 #include <vector>
 #include <queue>
 
 #define MAX_THREAD_SIZE 100
+
+class Thread;
 
 class WinThreadPool : public ThreadPool
 {

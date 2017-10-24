@@ -1,8 +1,9 @@
 #ifndef THREAD_H
 #define THREAD_H
 
-#include "ThreadPool.h"
 #include "DataStructureBase.h"
+
+class ThreadPool;
 
 class Thread {
 public:

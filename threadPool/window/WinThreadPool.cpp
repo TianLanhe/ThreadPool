@@ -62,6 +62,14 @@ int WinThreadPool::GetThreadsNum() {
 	return m_threadsNum;
 }
 
+int WinThreadPool::GetTaskCount() {
+	int size;
+	EnterCriticalSection(&m_cs);
+	size = m_tasks.size();
+	LeaveCriticalSection(&m_cs);
+	return size;
+}
+
 Status WinThreadPool::SetThreadsNum(int n) {
 	CHECK_ERROR(!m_bRun && !m_workingThreadsNum);
 	CHECK_ERROR(n > 0);

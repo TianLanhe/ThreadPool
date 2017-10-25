@@ -79,6 +79,7 @@ DWORD WINAPI WinThread::_ThreadProc(LPVOID lpParameter) {
 		if (task) {
 			task->Run();
 			delete task;
+			task = nullptr;
 		}
 		else {
 			pool->Release();

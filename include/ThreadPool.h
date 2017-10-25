@@ -13,6 +13,7 @@ public:
 	virtual Status WaitForThreads() = 0;
 
 	virtual Status AddTask(Task*) = 0;
+	virtual int GetTaskCount() = 0;
 
 	virtual int GetMaxThreadsNum() = 0;
 	virtual Status SetMaxThreadsNum(int) = 0;

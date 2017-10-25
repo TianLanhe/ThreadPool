@@ -21,6 +21,8 @@ public:
 	Status WaitForThreads();
 
 	Status AddTask(Task*);
+	int GetTaskCount();
+
 	bool IsRunning();
 
 	int GetMaxThreadsNum();

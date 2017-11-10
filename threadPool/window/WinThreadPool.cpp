@@ -5,6 +5,10 @@
 using namespace std;
 
 WinThreadPool::WinThreadPool(int threadsNum, int maxThreadsNum) :m_threadsNum(threadsNum), m_maxThreadsNum(maxThreadsNum), m_bRun(false), m_workingThreadsNum(0) {
+    
+    if(m_threadsNum < 1)
+        m_threadsNum = 1;
+    
 	if (m_maxThreadsNum < m_threadsNum)
 		m_maxThreadsNum = m_threadsNum;
 
@@ -146,9 +150,11 @@ bool WinThreadPool::IsRunning() {
 Status WinThreadPool::Request() {
 	CHECK_ERROR(m_hSemaphore);
 
+    EnterCriticalSection(&m_cs);
 	DWORD r = ::WaitForSingleObject(m_hSemaphore, INFINITE);
 	CHECK_ERROR(r == WAIT_OBJECT_0);
-
+    LeaveCriticalSection(&m_cs);
+    
 	return OK;
 }
 

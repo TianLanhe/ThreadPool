@@ -19,6 +19,8 @@ public:
 	virtual Status Terminate() = 0;
 
 	virtual bool IsRunning() = 0;
+
+	virtual bool IsEqual(const Thread&) = 0;
 };
 
 #endif // !THREAD_H

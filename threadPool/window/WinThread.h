@@ -21,6 +21,8 @@ public:
 
 	bool IsRunning();
 
+	bool IsEqual(const Thread&);	
+
 private:
 	static DWORD WINAPI _ThreadProc(LPVOID lpParameter);
 

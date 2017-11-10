@@ -65,6 +65,12 @@ bool WinThread::IsRunning() {
 	return m_bRun;
 }
 
+bool WinThread::IsEqual(const Thread& thread){
+	Thread* ptr = &thread;
+	WinThread& winthread = thread;
+	return dynamic_cast<WinThread*>(ptr) && !m_hThread && !winthread.m_hThread && winthread.m_hThread == m_hThread;
+}
+
 DWORD WINAPI WinThread::_ThreadProc(LPVOID lpParameter) {
 	WinThread* ptrThis = (WinThread*)lpParameter;
 	WinThreadPool* pool;

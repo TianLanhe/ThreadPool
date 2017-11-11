@@ -23,22 +23,50 @@ public:
     
     bool IsEqual(const Thread&);
     
-    void _shouldTerminate();
+    bool _shouldTerminate();
     void _suspend();
     void _assume();
     
 private:
     static void* _ThreadProc(void*);
+
+    Status _initMutex(pthread_mutex_t*& mutex){
+    	mutex = new pthread_mutex_t;
+    	return pthread_mutex_init(mutex,NULL) == 0 ? OK : ER;
+    }
+
+    Status _destroyMutex(pthread_mutex_t*& mutex){
+    	int r = pthread_mutex_destroy(mutex);
+    	delete mutex;
+    	mutex = NULL;
+    	return r == 0 ? OK : ER;
+    }
+
+    Status _initCond(pthread_cond_t*& cond){
+    	cond = new pthread_cond_t;
+    	return pthread_cond_init(cond,NULL) == 0 ? OK : ER;
+    }
+
+    Status _destroyCond(pthread_cond_t*& cond){
+    	int r = pthread_cond_destroy(cond);
+    	delete cond;
+    	cond = NULL;
+    	return r == 0 ? OK : ER;
+    }
+
+    void _notifyAll(pthread_cond_t*& cond){
+    	pthread_cond_broadcast(cond);
+    }
     
-    void _lock(pthread_mutex_t* mutex){
+    void _lock(pthread_mutex_t*& mutex){
         pthread_mutex_lock(mutex);
     }
     
-    void _unlock(pthread_mutex_t* mutex){
+    void _unlock(pthread_mutex_t*& mutex){
         pthread_mutex_unlock(mutex);
     }
     
-    void _waitForCondition(pthread_mutex_t* mutex,pthread_cond_t* cond){
+    void _waitForCondition(pthread_cond_t*& cond, pthread_mutex_t*& mutex){
         pthread_cond_wait(cond,mutex);
     }
     

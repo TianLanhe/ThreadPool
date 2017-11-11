@@ -6,9 +6,10 @@ Thread* GGetLinuxThread(ThreadPool* pool) {
     return new LinuxThread(pool);
 }
 
-LinuxThread::LinuxThread(ThreadPool* pool) :m_threadPool(pool), m_bRun(false),
-    m_theadId(NULL),
-    m_startAndStopMutex(NULL), m_runAndWaitMutex(NULL) {
+LinuxThread::LinuxThread(ThreadPool* pool) :
+	m_threadPool(pool), m_bRun(false), m_bTerminate(false), 
+    m_threadId(NULL),
+    m_runMutex(NULL), m_terminateMutex(NULL), m_cond(NULL) {
     Create();
 }
 
@@ -21,56 +22,57 @@ ThreadPool* LinuxThread::GetThreadPool() {
 }
 
 Status LinuxThread::Create() {
-    CHECK_ERROR(!m_theadId && !m_bRun);
+    CHECK_ERROR(!m_threadId);
     
-    if(m_startAndStopMutex){
-        pthread_mutex_destroy(m_startAndStopMutex);
-        free(m_startAndStopMutex);
-        delete m_startAndStopMutex = NULL;
-    }
-    if(m_runAndWaitMutex){
-        pthread_mutex_destroy(m_runAndWaitMutex);
-        free(m_runAndWaitMutex);
-        m_runAndWaitMutex = NULL;
-    }
+    BEFORE_CHECK_RESULT();
+
+    if(m_cond)
+        CHECK_RESULT(_destroyCond(m_cond));
+    CHECK_RESULT(_initCond(m_cond));
+
+    if(m_runMutex)
+    	CHECK_RESULT(_destroyMutex(m_runMutex));
+    CHECK_RESULT(_initMutex(m_runMutex));
+
+    if(m_terminateMutex)
+    	CHECK_RESULT(_destroyMutex(m_terminateMutex));
+    CHECK_RESULT(_initMutex(m_terminateMutex));
+
+    m_bRun = false;
+    m_bTerminate = false;
     
-    m_startAndStopMutex = new pthread_mutex_t;
-    pthread_mutex_init(m_startAndStopMutex,NULL);
-    
-    m_runAndWaitMutex = new pthread_mutex_t;
-    pthread_mutex_init(m_runAndWaitMutex,NULL);
-    
-    pthread_mutex_lock(m_startAndStopMutex);
-    
-    m_theadId = new pthread_t;
-    int ret = pthread_create(m_theadId,NULL,_ThreadProc,(void*)this);
+    m_threadId = new pthread_t;
+    int ret = pthread_create(m_threadId,NULL,_ThreadProc,(void*)this);
     
     return ret == 0 ? OK : ER;
 }
 
 Status LinuxThread::Destroy() {
-    CHECK_ERROR(m_theadId);
+    CHECK_ERROR(m_threadId);
     
     BEFORE_CHECK_RESULT();
-    pthread_cancel(*m_theadId);
-    if (!m_bRun) {
-        _assume();
-    }
-    pthread_join(*m_theadId);
-    delete m_theadId;
-    m_theadId = NULL;
+    CHECK_RESULT(Terminate());
+    delete m_threadId;
+    m_threadId = NULL;
+
+    m_bRun = false;
+    m_bTerminate = false;
+
+    CHECK_RESULT(_destroyMutex(m_terminateMutex));
+    CHECK_RESULT(_destroyMutex(m_runMutex));
+    CHECK_RESULT(_destroyCond(m_cond));
+
     AFTER_CHECK_RESULT();
 }
 
 Status LinuxThread::Start() {
-    CHECK_ERROR(m_theadId != PTHREAD_NULL && !m_bRun);
+    CHECK_ERROR(m_threadId && !m_bRun);
     _assume();
-    _start();
     return OK;
 }
 
 Status LinuxThread::Wait() {
-    CHECK_ERROR(m_theadId && !m_bRun);
+    CHECK_ERROR(m_threadId && m_bRun);
     _lock(m_runMutex);
     while(m_bRun)
         _waitForCondition(m_cond,m_runMutex);
@@ -82,29 +84,65 @@ Status LinuxThread::Terminate() {
     _lock(m_terminateMutex);
     m_bTerminate = true;
     _unlock(m_terminateMutex);
+
+    if(!IsRunning())
+    	_assume();
+
     void* val;
-    int ret = pthread_join(m_theadId,&val);
-    return ret == 0 && (*(long*)val) == 0 ? OK : ER;
+    int ret = pthread_join(*m_threadId,&val);
+    return ret == 0 && (*(Status*)val) == OK ? OK : ER;
 }
 
 bool LinuxThread::_shouldTerminate(){
+	bool terminate;
     _lock(m_terminateMutex);
-    bool terminate = m_bTerminate;
+    terminate = m_bTerminate;
     _unlock(m_terminateMutex);
-    return stop;
+    return terminate;
+}
+
+void LinuxThread::_suspend(){
+	_lock(m_runMutex);
+	if(m_bRun){
+		m_bRun = false;
+		_unlock(m_runMutex);
+		_notifyAll(m_cond);
+
+		_lock(m_runMutex);
+		while(!m_bRun)
+			_waitForCondition(m_cond,m_runMutex);
+		_unlock(m_runMutex);
+	}else{
+		_lock(m_runMutex);
+		while(!m_bRun)
+			_waitForCondition(m_cond,m_runMutex);
+		_unlock(m_runMutex);
+	}
+}
+
+void LinuxThread::_assume(){
+	_lock(m_runMutex);
+	if(!m_bRun){
+		m_bRun = true;
+		_unlock(m_runMutex);
+		_notifyAll(m_cond);
+	}else{
+		_unlock(m_runMutex);
+	}
 }
 
 bool LinuxThread::IsRunning() {
+	bool run;
     _lock(m_runMutex);
-    bool run = m_bRun;
+    run = m_bRun;
     _unlock(m_runMutex);
     return run;
 }
 
 bool LinuxThread::IsEqual(const Thread& thread){
-    Thread* ptr = &thread;
-    LinuxThread& linuxthread = thread;
-    return dynamic_cast<LinuxThread*>(ptr) && pthread_equal(m_theadId,linuxthread.m_theadId);
+    const Thread* ptr = &thread;
+    const LinuxThread* linuxthread = dynamic_cast<const LinuxThread*>(ptr);
+    return linuxthread && pthread_equal(*m_threadId,*(linuxthread->m_threadId));
 }
 
 void* LinuxThread::_ThreadProc(void* ptrVoid) {
@@ -114,10 +152,12 @@ void* LinuxThread::_ThreadProc(void* ptrVoid) {
     
     pool = dynamic_cast<LinuxThreadPool*>(ptrThis->GetThreadPool());
     if (pool == NULL)
-        return (void*)1;
+        return (void*)ER;
+
+    ptrThis->_suspend();
     
     while (1) {
-        if(ptrThis->_shouldStop())
+        if(ptrThis->_shouldTerminate())
             break;
         
         task = pool->GetTask();
@@ -130,5 +170,5 @@ void* LinuxThread::_ThreadProc(void* ptrVoid) {
             ptrThis->_suspend();
         }
     }
-    return (void*)0;
+    return (void*)OK;
 }

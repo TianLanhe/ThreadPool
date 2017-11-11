@@ -1,5 +1,6 @@
 #include "../include/ThreadPoolFactory.h"
-#ifdef defined(WIN32)
+
+#if defined(WIN32)
     #include "window/WinThreadPool.h"
 #elif defined(linux)
     #include "linux/LinuxThreadPool.h"
@@ -18,7 +19,7 @@ ThreadPool* ThreadPoolFactory::GetThreadPool() {
 	return new WinThreadPool();
 #elif defined(linux)
     return new LinuxThreadPool();
-#else
+#endif
+
     return NULL;
-#elif
 }

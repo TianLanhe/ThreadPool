@@ -1,5 +1,5 @@
-#include "include\ThreadPool.h"
-#include "include\ThreadPoolFactory.h"
+#include "include/ThreadPool.h"
+#include "include/ThreadPoolFactory.h"
 
 using namespace std;
 
@@ -11,7 +11,7 @@ int main() {
 	// set the number of thread in the thread pool
 	pool->SetThreadsNum(4);
 
-	// add concrete tasks to the thread pool
+	// implement your own tasks and add concrete tasks to the thread pool
 	// pool->AddTask(new ConcreteTask());
 
 	// start tasks under multi thread 

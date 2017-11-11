@@ -38,19 +38,22 @@ public:
     
 private:
     void _initMutex(){
-        pthread_mutex_init(&m_mutex);
+    	m_mutex = new pthread_mutex_t;
+        pthread_mutex_init(m_mutex,NULL);
     }
     
     void _destroyMutex(){
-        pthread_mutex_destroy(&m_mutex);
+        pthread_mutex_destroy(m_mutex);
+        delete m_mutex;
+        m_mutex = NULL;
     }
     
     void _lock(){
-        pthread_mutex_lock(&m_mutex);
+        pthread_mutex_lock(m_mutex);
     }
     
     void _unlock(){
-        pthread_mutex_unlock(&m_mutex);
+        pthread_mutex_unlock(m_mutex);
     }
     
     std::vector<Thread*> m_threads;
@@ -62,7 +65,7 @@ private:
     
     bool m_bRun;
     
-    pthread_mutex_t m_mutex;
+    pthread_mutex_t* m_mutex;
 };
 
 #endif

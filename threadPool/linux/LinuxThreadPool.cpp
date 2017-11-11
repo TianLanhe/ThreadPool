@@ -4,7 +4,7 @@
 
 using namespace std;
 
-LinuxThreadPool::LinuxThreadPool(int threadsNum, int maxThreadsNum) :m_threadsNum(threadsNum), m_maxThreadsNum(maxThreadsNum), m_bRun(false), m_workingThreadsNum(0) {
+LinuxThreadPool::LinuxThreadPool(int threadsNum, int maxThreadsNum) :m_threadsNum(threadsNum), m_maxThreadsNum(maxThreadsNum), m_bRun(false), m_workingThreadsNum(0), m_mutex(NULL) {
     
     if(m_threadsNum < 1)
         m_threadsNum = 1;
@@ -15,7 +15,7 @@ LinuxThreadPool::LinuxThreadPool(int threadsNum, int maxThreadsNum) :m_threadsNu
     _initMutex();
     
     for (int i = 0; i < m_threadsNum; ++i)
-        m_threads.push_back(GGetWinThread(this));
+        m_threads.push_back(GGetLinuxThread(this));
 }
 
 LinuxThreadPool::~LinuxThreadPool() {
@@ -79,7 +79,7 @@ Status LinuxThreadPool::SetThreadsNum(int n) {
     if (n != m_threadsNum) {
         if (n > m_threadsNum) {
             while (m_threadsNum < n) {
-                m_threads.push_back(GGetWinThread(this));
+                m_threads.push_back(GGetLinuxThread(this));
                 ++m_threadsNum;
             }
         }

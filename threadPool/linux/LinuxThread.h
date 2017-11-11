@@ -23,12 +23,12 @@ public:
     
     bool IsEqual(const Thread&);
     
+private:
+    static void* _ThreadProc(void*);
+
     bool _shouldTerminate();
     void _suspend();
     void _assume();
-    
-private:
-    static void* _ThreadProc(void*);
 
     Status _initMutex(pthread_mutex_t*& mutex){
     	mutex = new pthread_mutex_t;

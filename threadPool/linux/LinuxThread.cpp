@@ -10,11 +10,12 @@ LinuxThread::LinuxThread(ThreadPool* pool) :
 	m_threadPool(pool), m_bRun(false), m_bTerminate(false), 
     m_threadId(NULL),
     m_runMutex(NULL), m_terminateMutex(NULL), m_cond(NULL) {
-    Create();
+    //Create(); 延時創建，創建類時不一定立即產生線程，當需要用時才創建線程
 }
 
 LinuxThread::~LinuxThread() {
-    Destroy();
+	if(m_threadId)
+    	Destroy();
 }
 
 ThreadPool* LinuxThread::GetThreadPool() {
@@ -38,11 +39,15 @@ Status LinuxThread::Create() {
     	CHECK_RESULT(_destroyMutex(m_terminateMutex));
     CHECK_RESULT(_initMutex(m_terminateMutex));
 
-    m_bRun = false;
+    m_bRun = true;
     m_bTerminate = false;
     
     m_threadId = new pthread_t;
     int ret = pthread_create(m_threadId,NULL,_ThreadProc,(void*)this);
+    if(ret){
+    	delete m_threadId;
+    	m_threadId = NULL;
+    }
     
     return ret == 0 ? OK : ER;
 }
@@ -66,13 +71,18 @@ Status LinuxThread::Destroy() {
 }
 
 Status LinuxThread::Start() {
-    CHECK_ERROR(m_threadId && !m_bRun);
-    _assume();
+    CHECK_ERROR(!m_bRun);
+    BEFORE_CHECK_RESULT();
+    if(!m_threadId){	//延時創建，創建類時不一定立即產生線程，當需要用時才創建線程
+    	CHECK_RESULT(Create());
+    }else{
+    	_assume();
+    }
     return OK;
 }
 
 Status LinuxThread::Wait() {
-    CHECK_ERROR(m_threadId && m_bRun);
+    CHECK_ERROR(m_threadId);
     _lock(m_runMutex);
     while(m_bRun)
         _waitForCondition(m_cond,m_runMutex);
@@ -81,6 +91,8 @@ Status LinuxThread::Wait() {
 }
 
 Status LinuxThread::Terminate() {
+	CHECK_ERROR(m_threadId);
+
     _lock(m_terminateMutex);
     m_bTerminate = true;
     _unlock(m_terminateMutex);
@@ -109,15 +121,10 @@ void LinuxThread::_suspend(){
 		_notifyAll(m_cond);
 
 		_lock(m_runMutex);
-		while(!m_bRun)
-			_waitForCondition(m_cond,m_runMutex);
-		_unlock(m_runMutex);
-	}else{
-		_lock(m_runMutex);
-		while(!m_bRun)
-			_waitForCondition(m_cond,m_runMutex);
-		_unlock(m_runMutex);
 	}
+	while(!m_bRun)
+		_waitForCondition(m_cond,m_runMutex);
+	_unlock(m_runMutex);
 }
 
 void LinuxThread::_assume(){
@@ -153,8 +160,6 @@ void* LinuxThread::_ThreadProc(void* ptrVoid) {
     pool = dynamic_cast<LinuxThreadPool*>(ptrThis->GetThreadPool());
     if (pool == NULL)
         return (void*)ER;
-
-    ptrThis->_suspend();
     
     while (1) {
         if(ptrThis->_shouldTerminate())
@@ -164,7 +169,7 @@ void* LinuxThread::_ThreadProc(void* ptrVoid) {
         if (task) {
             task->Run();
             delete task;
-            task = nullptr;
+            task = NULL;
         }
         else {
             ptrThis->_suspend();

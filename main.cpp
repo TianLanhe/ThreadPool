@@ -12,6 +12,7 @@ int main() {
 	pool->SetThreadsNum(4);
 
 	// implement your own tasks and add concrete tasks to the thread pool
+	// one thing to be noted is that task will be destructed after running
 	// pool->AddTask(new ConcreteTask());
 
 	// start tasks under multi thread 

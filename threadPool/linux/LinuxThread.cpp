@@ -113,9 +113,9 @@ Status LinuxThread::Terminate() {
     if(!IsRunning())
     	_assume();
 
-    void* val;
-    int ret = pthread_join(*m_threadId,&val);
-    return ret == 0 && (*(Status*)val) == OK ? OK : ER;
+    Status retval;
+    int ret = pthread_join(*m_threadId,(void**)&retval);
+    return (ret == 0 && val == OK) ? OK : ER;
 }
 
 bool LinuxThread::_shouldTerminate(){

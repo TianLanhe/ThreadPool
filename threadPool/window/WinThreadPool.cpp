@@ -4,16 +4,18 @@
 
 using namespace std;
 
-WinThreadPool::WinThreadPool(int threadsNum, int maxThreadsNum) :m_threadsNum(threadsNum), m_maxThreadsNum(maxThreadsNum), m_bRun(false), m_workingThreadsNum(0) {
-    
-    if(m_threadsNum < 1)
-        m_threadsNum = 1;
-    
+WinThreadPool::WinThreadPool(int threadsNum, int maxThreadsNum) :
+	m_threadsNum(threadsNum), m_maxThreadsNum(maxThreadsNum),
+	m_bRun(false),
+	m_workingThreadsNum(0) {
+
+	if (m_threadsNum < 1)
+		m_threadsNum = 1;
+
 	if (m_maxThreadsNum < m_threadsNum)
 		m_maxThreadsNum = m_threadsNum;
 
-	InitializeCriticalSection(&m_cs);
-	m_hSemaphore = CreateSemaphore(NULL, 0, m_maxThreadsNum, NULL);
+	_initMutex();
 
 	for (int i = 0; i < m_threadsNum; ++i)
 		m_threads.push_back(GGetWinThread(this));
@@ -30,8 +32,7 @@ WinThreadPool::~WinThreadPool() {
 		m_tasks.pop();
 		delete task;
 	}
-	DeleteCriticalSection(&m_cs);
-	CloseHandle(m_hSemaphore);
+	_destroyMutex();
 }
 
 Status WinThreadPool::StartTasks() {
@@ -68,16 +69,15 @@ int WinThreadPool::GetThreadsNum() {
 
 int WinThreadPool::GetTaskCount() {
 	int size;
-	EnterCriticalSection(&m_cs);
+	_lock();
 	size = m_tasks.size();
-	LeaveCriticalSection(&m_cs);
+	_unlock();
 	return size;
 }
 
 Status WinThreadPool::SetThreadsNum(int n) {
 	CHECK_ERROR(!m_bRun && !m_workingThreadsNum);
-	CHECK_ERROR(n > 0);
-	CHECK_ERROR(n <= m_maxThreadsNum);
+	CHECK_ERROR(n > 0 && n <= m_maxThreadsNum);
 
 	if (n != m_threadsNum) {
 		if (n > m_threadsNum) {
@@ -114,56 +114,32 @@ Status WinThreadPool::SetMaxThreadsNum(int n) {
 			delete thread;
 		}
 		m_maxThreadsNum = n;
-
-		CloseHandle(m_hSemaphore);
-		m_hSemaphore = CreateSemaphore(NULL, 0, m_maxThreadsNum, NULL);
 	}
 	return OK;
 }
 
 Status WinThreadPool::AddTask(Task* task) {
 	if (task) {
-		EnterCriticalSection(&m_cs);
+		_lock();
 		m_tasks.push(task);
-		LeaveCriticalSection(&m_cs);
+		_unlock();
 	}
 	return OK;
 }
 
 Task* WinThreadPool::GetTask() {
 	Task *task;
-	EnterCriticalSection(&m_cs);
+	_lock();
 	if (m_tasks.empty())
 		task = NULL;
 	else {
 		task = m_tasks.front();
 		m_tasks.pop();
 	}
-	LeaveCriticalSection(&m_cs);
+	_unlock();
 	return task;
 }
 
 bool WinThreadPool::IsRunning() {
 	return m_bRun;
-}
-
-Status WinThreadPool::Request() {
-	CHECK_ERROR(m_hSemaphore);
-
-    EnterCriticalSection(&m_cs);
-	DWORD r = ::WaitForSingleObject(m_hSemaphore, INFINITE);
-	CHECK_ERROR(r == WAIT_OBJECT_0);
-    LeaveCriticalSection(&m_cs);
-    
-	return OK;
-}
-
-Status WinThreadPool::Release() {
-	EnterCriticalSection(&m_cs);
-	CHECK_ERROR(m_hSemaphore);
-
-	DWORD r = ::ReleaseSemaphore(m_hSemaphore, 1, NULL);
-	CHECK_ERROR(r);
-	LeaveCriticalSection(&m_cs);
-	return OK;
 }

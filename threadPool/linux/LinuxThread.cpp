@@ -56,7 +56,7 @@ Status LinuxThread::Destroy() {
     CHECK_ERROR(m_threadId);
     
     BEFORE_CHECK_RESULT();
-    CHECK_RESULT(Terminate());
+    Terminate();
     delete m_threadId;
     m_threadId = NULL;
 
@@ -71,7 +71,8 @@ Status LinuxThread::Destroy() {
 }
 
 Status LinuxThread::Start() {
-    CHECK_ERROR(!m_bRun);
+    CHECK_ERROR(!m_bRun && !m_bTerminate); // m_bRun和m_bTerminate可能不一致，但如果加锁，因为线程可能没创建锁还不能用
+    
     BEFORE_CHECK_RESULT();
     if(!m_threadId){	//延時創建，創建類時不一定立即產生線程，當需要用時才創建線程
     	CHECK_RESULT(Create());
@@ -83,6 +84,14 @@ Status LinuxThread::Start() {
 
 Status LinuxThread::Wait() {
     CHECK_ERROR(m_threadId);
+
+    _lock(m_terminateMutex);
+    if(m_bTerminate){
+        _unlock(m_terminateMutex);
+        return ER;
+    }
+    _unlock(m_terminateMutex);
+
     _lock(m_runMutex);
     while(m_bRun)
         _waitForCondition(m_cond,m_runMutex);
@@ -94,6 +103,10 @@ Status LinuxThread::Terminate() {
 	CHECK_ERROR(m_threadId);
 
     _lock(m_terminateMutex);
+    if(m_bTerminate){
+        _unlock(m_terminateMutex);
+        return ER;
+    }
     m_bTerminate = true;
     _unlock(m_terminateMutex);
 
@@ -149,7 +162,7 @@ bool LinuxThread::IsRunning() {
 bool LinuxThread::IsEqual(const Thread& thread){
     const Thread* ptr = &thread;
     const LinuxThread* linuxthread = dynamic_cast<const LinuxThread*>(ptr);
-    return linuxthread && pthread_equal(*m_threadId,*(linuxthread->m_threadId));
+    return linuxthread && m_threadId && linuxthread->m_threadId && pthread_equal(*m_threadId,*(linuxthread->m_threadId));
 }
 
 void* LinuxThread::_ThreadProc(void* ptrVoid) {

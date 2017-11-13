@@ -35,10 +35,23 @@ public:
 
 public:
 	Task* GetTask();
-	Status Request();
-	Status Release();
 
 private:
+	void _initMutex(){
+		InitializeCriticalSection(&m_cs);
+	}
+
+	void _destroyMutex() {
+		DeleteCriticalSection(&m_cs);
+	}
+
+	void _lock() {
+		EnterCriticalSection(&m_cs);
+	}
+	void _unlock() {
+		LeaveCriticalSection(&m_cs);
+	}
+
 	std::vector<Thread*> m_threads;
 	std::queue<Task*> m_tasks;
 
@@ -49,7 +62,6 @@ private:
 	bool m_bRun;
 
 	CRITICAL_SECTION m_cs;
-	HANDLE m_hSemaphore;
 };
 
 #endif

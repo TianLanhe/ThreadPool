@@ -15,7 +15,7 @@ LinuxThreadPool.o:threadPool/linux/LinuxThreadPool.cpp threadPool/linux/LinuxThr
 	g++ -c threadPool/linux/LinuxThreadPool.cpp -std=c++11 $(DEBUG)
 
 ThreadPoolFactory.o:threadPool/ThreadPoolFactory.cpp include/ThreadPoolFactory.h threadPool/linux/LinuxThread.h
-	g++ -c threadPool/ThreadPoolFactory.cpp $(DEBUG)
+	g++ -c threadPool/ThreadPoolFactory.cpp -std=c++11 $(DEBUG)
 
 clean:
 	rm *.o

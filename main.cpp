@@ -1,13 +1,11 @@
 #include "include/ThreadPool.h"
 #include "include/ThreadPoolFactory.h"
 
-using namespace std;
-
 int main() {
 	
 	// get the thread pool
 	ThreadPool *pool = ThreadPoolFactory::GetInstance()->GetThreadPool();
-	
+
 	// set the number of thread in the thread pool
 	pool->SetThreadsNum(4);
 
